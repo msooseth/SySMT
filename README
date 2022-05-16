@@ -1,3 +1,6 @@
+NOTE: this is a copy from https://verit.loria.fr/SyMT/
+Only changes have been to fix the compilation issue regarding headers
+containing veriable _definitions_ instead of _declarations_
 
 			 The veriT SMT solver
 			 General informations
