@@ -1,0 +1,47 @@
+#!/bin/bash
+
+usage()
+{
+cat << EOF
+usage: $0 options benchmark
+
+SyMT checks an SMT-LIB2 benchmark for symmetries and outputs the generators of
+the symmetry group.
+
+OPTIONS:
+   -h      Show this message
+   -s      Enable simple, syntactic simplifications
+   -S      Enable syntactic and SMT-solver based simplifications
+   -v      Prints many (mostly irrelevant) statistics
+
+This version of the software is a prototype, for reviewing purposes.  A more
+stable version of the version will be shipped with the next version of veriT,
+hopefully in the near future.
+
+Anonymous reviewers can send us anonymous bug reports on
+http://www.verit-solver.org/SyMT
+They will be handled with the highest urgency.
+EOF
+}
+
+OPTIONS="--disable-banner --disable-print-success --print-simp-and-exit --output=saucy_graph"
+while getopts "hsSv" OPTION; do
+    case $OPTION in
+	h)  usage
+            exit 1 ;;
+	s)  OPTIONS="$OPTIONS --enable-simp" ;;
+	S)  OPTIONS="$OPTIONS --enable-simp --enable-unit-simp --enable-unit-subst-simp --enable-bclause" ;;
+	v)  OPTIONS="$OPTIONS -v" ;;
+	?)  usage
+            exit 2
+            ;;
+    esac
+done
+
+if [[ ! -x ./veriT ]]; then
+   echo "Make sure veriT is compiled, and SyMT is run from its directory"
+   exit 2
+fi
+
+shift $(( $OPTIND - 1))
+./veriT $OPTIONS $1 | grep -v unknown

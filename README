@@ -1,0 +1,25 @@
+
+			 The veriT SMT solver
+			 General informations
+			
+The  veriT solver  provides  a complete  satisfiability procedure  for
+quantifier-free formulas  with uninterpreted functions  and difference
+logic  on  real  numbers and  integers.   It  also  comes up  with  an
+incomplete  procedure  for  quantified formula  through  instantiation
+heuristics and  inclusion of a first-order theorem  prover.  veriT has
+the capability to build proofs which  may then be reused or checked by
+external tools.
+
+veriT is available under the BSD  license.  It has a front-end for the
+SMTLIB language (documented  at http://www.smtlib.org), augmented with
+macro-definitions.
+
+Compilation  and installation  instructions are  in the  INSTALL file.
+Documentation  is available  in man,  html  and latex  formats in  the
+directories doc/user/verit and doc/user/librv.
+
+The following  command prints  a list of  the available options  and a
+short description of each option:
+verit --help
+
+Please notice that symbol names beginning with veriT__ are reserved.

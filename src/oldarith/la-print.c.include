@@ -1,0 +1,431 @@
+static void          la_mon_print(Tmon m, char c);
+static void          la_exp_print(Texp e);
+static void          la_simplex_print(Tsimplex s);
+static void          la_check_data_consistency(Tsimplex s);
+
+
+/* DC Goes through some link lists for cheking consistency */
+static void
+la_check_data_consistency(Tsimplex s)
+{
+  Tunsigned i;
+
+  fprintf(stderr, "Checking equations of each variable:\n");
+  for (i = 1; i < table_length(s->vp); ++i)
+    {
+      Tvar_prop vp = table_get(s->vp, i);
+      Tlist ptr;
+ 
+      /* DC For each equation that containt the variable 'i' */
+      fprintf(stderr, "x%d is in:", i);
+      ptr = vp->lm;
+      if (ptr == NULL)
+	fprintf(stderr, " NONE\n");
+      else
+	{
+	  while (ptr != NULL) 
+	    {
+	      Tmon m = (Tmon)list_car(ptr);
+	      if (number_equal(m->coef, number_zero))
+		{
+	          /* DC Update equation linking list */
+		  fprintf(stderr, " [DEL link];");
+	          la_mon_free(m);
+		  if (la_list_remove(&ptr, &vp->lm)) break;
+	        }
+	      else
+		{
+		  fprintf(stderr, " (#%d);", m->e->id);
+		  
+	          ptr = list_cdr(ptr);
+		  if (ptr == vp->lm)
+		    break;
+		}		
+	    }
+	  /* DC If the basic variable is presented in more than one equation
+	        or in no equation at all, then we have a problem! */
+	  if (vp->basic != -1 && (ptr == NULL || list_cdr(ptr) != ptr))
+	    fprintf(stderr, " PROBLEM");
+	  fprintf(stderr, "\n");
+	}
+    }
+  
+  fprintf(stderr, "\n");
+  fprintf(stderr, "Checking equations of each equation:\n");
+  for (i = 0; i < table_length(s->eq); ++i)
+    {
+      Tequation eq = (Tequation)table_get(s->eq, i);
+      Tlist ptr;
+ 
+      if (eq == NULL)
+	continue;
+      /* DC For each equation that containt the variable 'i' */
+      fprintf(stderr, "C%d is in:", i+1);
+      ptr = eq->lm;
+      if (ptr == NULL)
+	fprintf(stderr, " NONE (PROBLEM)\n");
+      else
+	{
+	  while (ptr != NULL) 
+	    {
+	      Tmon m = (Tmon)list_car(ptr);
+	      if (number_equal(m->coef, number_zero))
+		{
+	          /* DC Update equation linking list */
+		  fprintf(stderr, " [DEL link];");
+		  la_mon_free(m);
+		  if (la_list_remove(&ptr, &eq->lm)) break;
+	        }
+	      else
+		{
+		  fprintf(stderr, " (#%d);", m->e->id);
+		  
+	          ptr = list_cdr(ptr);
+		  if (ptr == eq->lm)
+		    break;
+		}		
+	    }
+	  fprintf(stderr, "\n");
+	}
+    }
+  
+  fprintf(stderr, "\n");
+  fprintf(stderr, "Checking if the monomials are correctly pointing to their equations:\n");
+  for (i = 0; i < table_length(s->eq); ++i)
+    {
+      Tequation e = (Tequation)table_get(s->eq, i);
+      if (e != NULL && la_get_basic_var(s, e) != NULL)
+	{
+	  Tlist ptr = e->le->mons;
+	  bool ok = true;
+	  
+	  do
+	    {
+	      Tmon m = (Tmon)list_car(ptr);
+	      if (m->e != e)
+	        {
+		  ok = false;
+		  break;
+		}
+	      ptr = list_cdr(ptr);
+	    }
+	  while (ptr != e->le->mons);
+	  fprintf(stderr, "#%d: %s; ", i+1, ok ? "OK" : "PROBLEM!");
+	}
+    }
+  fprintf(stderr, "\n");
+  
+  fprintf(stderr, "\n");
+  fprintf(stderr, "Checking if the values of the equations match:\n");
+  for (i = 0; i < table_length(s->eq); ++i)
+    {
+      Tequation e = (Tequation)table_get(s->eq, i);
+      if (e != NULL && la_get_basic_var(s, e) != NULL)
+	{
+	  Tlist ptr;
+	  Tnumber n = number_new();
+	  Tnumber t = number_new();
+	  
+	  ptr = list_cdr(e->le->mons);
+	  if (ptr != e->le->mons)
+	    do
+	      {
+		Tmon m = (Tmon)list_car(ptr);
+		Tvar_prop vp = (Tvar_prop)table_get(s->vp, m->var->id);
+		number_mul(t, m->coef, vp->value);
+		number_add(n, n, t);
+		ptr = list_cdr(ptr);
+	      }
+	    while (ptr != e->le->mons);
+	  number_add(n, n, ((Tmon)list_car(ptr))->coef);
+	  
+	  fprintf(stderr, "#%d: ", i+1);
+	  if (number_equal(n, number_zero))
+	    fprintf(stderr, "OK; ");
+	  else
+	    fprintf(stderr, "PROBLEM (%s != 0)", number_to_str(n));
+	  
+	  number_free(n);
+	  number_free(t);
+	}
+    }
+  fprintf(stderr, "\n");
+  
+  fprintf(stderr, "\n");
+  fprintf(stderr, "Checking if the values of the original equations match:\n");
+  for (i = 0; i < table_length(s->eq); ++i)
+    {
+      Tequation e = (Tequation)table_get(s->eq, i);
+      if (e != NULL && la_get_basic_var(s, e) != NULL)
+	{
+	  Tlist ptr;
+	  Tnumber n = number_new();
+	  Tnumber t = number_new();
+	  
+	  ptr = list_cdr(e->user_le->mons);
+	  if (ptr != e->user_le->mons)
+	    do
+	      {
+		Tmon m = (Tmon)list_car(ptr);
+		Tvar_prop vp = (Tvar_prop)table_get(s->vp, m->var->id);
+		number_mul(t, m->coef, vp->value);
+		number_add(n, n, t);
+		/*printf("From variable %dx, adding %s = (%s * %s)\n", m->var->id, number_to_str(t), number_to_str(m->coef), number_to_str(vp->value));
+		if (m->var->id == 17){
+		  printf("pointer to 17 is %p, value = %s", vp->value, number_to_str(((Tvar_prop)table_get(s->vp, 17))->value));
+		  printf("equal? = %d\n", number_equal(((Tvar_prop)table_get(s->vp, 17))->value, vp->value));
+		}*/
+		ptr = list_cdr(ptr);
+	      }
+	    while (ptr != e->user_le->mons);
+	  /*printf("From variable 0x, adding %s\n", number_to_str(((Tmon)list_car(ptr))->coef));*/
+	  number_add(n, n, ((Tmon)list_car(ptr))->coef);
+	  
+	  fprintf(stderr, "#%d: ", i+1);
+	  if (number_equal(n, number_zero))
+	    fprintf(stderr, "OK; ");
+	  else
+	    fprintf(stderr, "PROBLEM (%s != 0)", number_to_str(n));
+	  
+	  number_free(n);
+	  number_free(t);
+	}
+    }
+  fprintf(stderr, "\n");
+  
+  fprintf(stderr, "\n");
+  if (s->goal != NULL){
+    Tlist ptr;
+    Tnumber n = number_new();
+    Tnumber v = number_new();
+    bool basic_in_goal = false;  
+    
+    /* DC For each variable in the goal */
+    ptr = list_cdr(s->goal->le->mons);
+    if (ptr != s->goal->le->mons)
+      do
+	{
+	  /* DC Add to the solution 'coef' * 'value' */
+	  Tmon m = list_car(ptr);
+	  Tvar_prop vp = (Tvar_prop)table_get(s->vp, m->var->id);
+	  
+	  number_mul(n, m->coef, vp->value);
+	  number_add(v, v, n);
+	  
+	  if (vp->basic != -1)
+	    basic_in_goal = true;
+	  
+	  ptr = list_cdr(ptr);
+	}
+      while (ptr != s->goal->le->mons);
+    number_add(v,v, ((Tmon)list_car(ptr))->coef);
+    
+    if (la_get_basic_var(s, s->goal) == NULL)
+      {
+	fprintf(stderr, "Checking solution value:");
+        if (number_equal(s->sol, v))
+	  fprintf(stderr, " OK\n");
+        else
+          fprintf(stderr, " PROBLEM (%s != %s)\n", number_to_str(s->sol), number_to_str(v));
+      }
+    
+    number_free(n);
+    number_free(v);
+  }
+
+  if (s->consistent == false)
+    {
+      /*Tlist ptr;
+      Texp e;
+      
+      fprintf(stderr, "Checking explanation of unsatisfiability: ");
+      e = la_exp_new(s, NULL, NULL, 0, LA_INTERNAL, NULL);*/
+            
+      /* DC For each variable in the goal explanation */
+      /*ptr = list_cdr(s->goal->comb->mons);
+      if (ptr != s->goal->comb->mons)
+	do
+	  {
+	    Tmon m = list_car(ptr);
+	    Texp ue = la_equation_from_var(s, m->var)->user_le;
+	    printf("Adding equation #%d\n", la_equation_from_var(s, m->var)->id);
+	    la_exp_combine(s, e, ue, number_one, m->coef);
+	    ptr = list_cdr(ptr);
+	  }
+	while (ptr != s->goal->comb->mons);
+      la_exp_print(e);
+      if (!number_equal(((Tmon)list_car(e->mons))->coef, number_zero))
+        fprintf(stderr, "!= 0 ==> OK\n");      
+      else
+	fprintf(stderr, "= 0 ==> PROBLEM\n");
+      la_exp_free(e);*/
+    }
+}
+
+/*-----------------------------------------------------------------------*/
+
+/* DC Prints a monomial */
+static void
+la_mon_print(Tmon m, char c)
+{
+  if (number_geq(m->coef, number_zero))
+    fprintf(stderr, "+ %s ", number_to_str(m->coef));
+  else
+    {
+      number_neg(m->coef);
+      fprintf(stderr, "- %s ", number_to_str(m->coef));
+      number_neg(m->coef);
+    }
+  if (m->var->id != 0)
+    fprintf(stderr, "%c%d ", c, m->var->id);
+}
+
+/*-----------------------------------------------------------------------*/
+
+/* DC Prints an expression */
+static void
+la_exp_print(Texp e)
+{
+  Tlist l = e->mons;
+  int pre = -1;
+  if (l == NULL)
+    fprintf(stderr, "0");
+  else
+    {
+      Tlist ptr = l;
+      do
+	{
+	  Tmon m = (Tmon)list_car(ptr);
+	  assert(m->var->id > pre);
+	  pre = m->var->id;
+	  if (e->kind == LA_USER)
+	    la_mon_print(m, 'x');
+	  else
+	    la_mon_print(m, 'C');
+	  ptr = list_cdr(ptr);
+        }
+      while (ptr != l);
+    }
+}
+
+/*-----------------------------------------------------------------------*/
+
+/* DC Prints the simplex, checking for consistency in the data. */
+static void
+la_simplex_print(Tsimplex s)
+{
+  int i;
+
+  fprintf(stderr, "********************************************************************************\n");
+  fprintf(stderr, "SIMPLEX DATA (level %d)\n", s->level);
+  fprintf(stderr, "Minimize: "); (s->goal != NULL ? la_exp_print(s->goal->le) : fprintf(stderr, "NULL")); fprintf(stderr, "\n\n");
+  fprintf(stderr, "Subject to:\n");
+  for (i = 0; i < table_length(s->eq); ++i)
+    {
+      Tequation e = (Tequation)table_get(s->eq, i);
+      if (e != NULL && la_get_basic_var(s, e) != NULL)
+	{
+	  fprintf(stderr, "#%d:\t", i+1); 
+	  la_exp_print(e->le); 
+	  fprintf(stderr, " = 0; (BV = x%d)\n", la_get_basic_var(s, e)->id);
+	}
+    }  
+  fprintf(stderr, "\n");
+  
+  fprintf(stderr, "Variable\t %20s %20s %20s\n", "lower bound", "current value", "upper bound");
+  for (i = 1; i < table_length(s->vp); ++i)
+    {
+      Tvar_prop vp = (Tvar_prop)table_get(s->vp, i);
+      fprintf(stderr, "x%d (%s-%s)\t %20s %20s %20s \n", i, vp->basic != -1 ? "BV" : "NBV", vp->is_int ? "INT" : "REAL" , number_to_str(vp->lower), 
+	     number_to_str(vp->value), number_to_str(vp->upper));
+    }
+  
+  fprintf(stderr, "\n");
+  fprintf(stderr, "Current Solution: %s\n", number_to_str(s->sol));
+  fprintf(stderr, "Status: %s\n", s->consistent ? "SATISFIABLE" : "UNSATISFIABLE");
+  if (s->consistent == false && s->goal != NULL)
+    {
+      Tlist ptr;
+      fprintf(stderr, "Problem unsatisfiable because:\n");
+      la_exp_print(s->goal->comb); fprintf(stderr, "\n");
+      /* DC For each variable in the goal */
+      ptr = list_cdr(s->goal->le->mons);
+      if (ptr != s->goal->le->mons)
+	do
+	  {
+	    Tmon m = list_car(ptr);
+	    Tvar_prop vp = (Tvar_prop)table_get(s->vp, m->var->id);
+	    
+	    if (number_less(la_solution_value(s), la_goal_value(s)))
+	      {
+		if (number_less(m->coef, number_zero))
+		  la_exp_print(vp->exp_lower);
+		else
+		  la_exp_print(vp->exp_upper);
+	      }
+	    else
+	      {
+		if (number_less(m->coef, number_zero))
+		  la_exp_print(vp->exp_upper);
+		else
+		  la_exp_print(vp->exp_lower);
+	      }
+	    fprintf(stderr, "\n");
+	    ptr = list_cdr(ptr);
+	  }
+	while (ptr != s->goal->le->mons);
+      
+    }
+  fprintf(stderr, "\n");
+  fprintf(stderr, "Explanation of the equations:\n");
+  if (s->goal != NULL)
+    fprintf(stderr, "Goal:\t"), la_exp_print(s->goal->comb), fprintf(stderr, "\n");
+  for (i = 0; i < table_length(s->eq); ++i)
+    {
+      Tequation e = (Tequation)table_get(s->eq, i);
+      if (e != NULL && la_get_basic_var(s, e) != NULL)
+	{
+	  fprintf(stderr, "#%d: \t", e->id);
+	  la_exp_print(e->comb);
+	  fprintf(stderr, "\n");
+	}
+    }
+
+  fprintf(stderr, "\n");
+  fprintf(stderr, "Explanation of the bounds:\n");
+  for (i = 1; i < table_length(s->vp); ++i)
+    {
+      Tvar_prop vp = (Tvar_prop)table_get(s->vp, i);
+      fprintf(stderr, "x%d: \t (lower bound): ", i);
+      la_exp_print(vp->exp_lower);
+      fprintf(stderr, ";\t (upper bound): ");
+      la_exp_print(vp->exp_upper);
+      fprintf(stderr, "\n");
+    }
+  fprintf(stderr, "\n");
+  
+  fprintf(stderr, "\n");
+  fprintf(stderr, "User equalities and inequalities are:\n");
+  for (i = 0; i < table_length(s->eq); ++i)
+    {
+      Tequation e = (Tequation)table_get(s->eq, i);
+      if (e != NULL)
+	{
+	  fprintf(stderr, "#%d: \t", e->id);
+	  la_exp_print(e->user_le);
+	  fprintf(stderr, "\n");
+	}
+    }
+  
+  fprintf(stderr, "\n");
+  fprintf(stderr, "User disequalities are:\n");
+  for (i = 0; i < table_length(s->disequalities); ++i)
+    {
+      Tdisequality d = (Tdisequality)table_get(s->disequalities, i);
+      fprintf(stderr, "#%d: x%d != x%d\n", d->id, d->var_id1, d->var_id2);
+    }
+  fprintf(stderr, "\n");
+  
+  la_check_data_consistency(s);
+  fprintf(stderr, "********************************************************************************\n");
+}

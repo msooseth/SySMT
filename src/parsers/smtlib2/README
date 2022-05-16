@@ -1,0 +1,7 @@
+The yacc and lex files are generated from m4 files.
+
+Erase "-D SMTEXT" in Makefile and run "make" afterwards to generate a
+SMT-LIB 2.0 compliant compiler.
+
+With "-D SMTEXT", the compiler contains extensions that we use in the
+current version of veriT

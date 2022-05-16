@@ -1,0 +1,46 @@
+static void
+la_do_test7()
+{
+#define NC 7
+#define NV 5
+  Tvar_id v[][NV] = {
+    {0, 1, 2, 3, 4},
+    {0, 1, 2, 3, 4},
+    {0, 1, 2, 3, 4},
+    {0, 1, 2, 3, 4},
+    {0, 1, 2, 3, 4},
+    {0, 1, 2, 3, 4},
+    {0, 1, 2, 3, 4},
+  }; 
+  int coef[][NV] = {
+    {0, 4, 2, -14, -2},
+    {0, -78, -14, 78, 4},
+    {0, 230, 215, -1355, -40},
+    {0, -1, 0, 0, 0},
+    {0, 0, -1, 0, 0},
+    {0, 0, 0, -1, 0},
+    {0, 0, 0, 0, -1},
+  };
+  Tvar_kind v_type[][NV] = {
+    {LA_RATIONAL, LA_RATIONAL, LA_RATIONAL, LA_RATIONAL, LA_RATIONAL},
+    {LA_RATIONAL, LA_RATIONAL, LA_RATIONAL, LA_RATIONAL, LA_RATIONAL},
+    {LA_RATIONAL, LA_RATIONAL, LA_RATIONAL, LA_RATIONAL, LA_RATIONAL},
+    {LA_RATIONAL, LA_RATIONAL, LA_RATIONAL, LA_RATIONAL, LA_RATIONAL},
+    {LA_RATIONAL, LA_RATIONAL, LA_RATIONAL, LA_RATIONAL, LA_RATIONAL},
+    {LA_RATIONAL, LA_RATIONAL, LA_RATIONAL, LA_RATIONAL, LA_RATIONAL},
+    {LA_RATIONAL, LA_RATIONAL, LA_RATIONAL, LA_RATIONAL, LA_RATIONAL},
+    {LA_RATIONAL, LA_RATIONAL, LA_RATIONAL, LA_RATIONAL, LA_RATIONAL},
+  };
+  Tconstraint_kind c_type[] = {
+    LA_INEQUALITY,
+    LA_INEQUALITY,
+    LA_INEQUALITY,
+    LA_INEQUALITY,
+    LA_INEQUALITY,
+    LA_INEQUALITY,
+    LA_INEQUALITY,
+  };
+  la_do_test_push_pop(NC, NV, coef, v, v_type, c_type);
+#undef NC
+#undef NV
+}

@@ -1,0 +1,30 @@
+/* DC A test */
+static void
+la_do_test1()
+{
+#define NC 3
+#define NV 5   
+  Tvar_id v[][NV] = {
+    {0, 1, 2, 3, 0},
+    {0, 0, 1, 3, 0},
+    {0, 3, 2, 4, 0},
+  };
+  int coef[][NV] = {
+    {1, 1, 1, 1, 0},
+    {0, 0, 1, 1, 0},
+    {2, 1, 1, 1, 0},
+  };
+  Tvar_kind v_type[][NV] = {
+    {LA_RATIONAL, LA_RATIONAL, LA_RATIONAL, LA_RATIONAL, LA_RATIONAL},
+    {LA_RATIONAL, LA_RATIONAL, LA_RATIONAL, LA_RATIONAL, LA_RATIONAL},
+    {LA_RATIONAL, LA_RATIONAL, LA_RATIONAL, LA_RATIONAL, LA_RATIONAL},
+  };
+  Tconstraint_kind c_type[] = {
+    LA_EQUALITY,
+    LA_EQUALITY,
+    LA_EQUALITY,
+  }; 
+  la_do_test_push_pop(NC, NV, coef, v, v_type, c_type);
+#undef NC
+#undef NV
+}

@@ -1,0 +1,42 @@
+static void
+la_do_test9()
+{
+#define NC 6
+#define NV 4
+  Tvar_id v[][NV] = {
+    {0, 1, 2, 3},
+    {0, 1, 2, 3},
+    {1, 3, 0, 0},
+    {0, 1, 2, 3},
+    {0, 1, 2, 3},
+    {2, 3, 0, 0},
+    {1, 2, 0, 0},
+  };  
+  int coef[][NV] = {
+    {2, 0, 0, 1},
+    {1, 1, 0, 0},
+    {0, 1, 0, -1},
+    {1, 0, 1, 0},
+    {0, 0, 1, -1},
+    {0, 1, -1, 0},
+  };
+  Tvar_kind v_type[][NV] = {
+    {LA_RATIONAL, LA_RATIONAL, LA_RATIONAL, LA_RATIONAL},
+    {LA_RATIONAL, LA_RATIONAL, LA_RATIONAL, LA_RATIONAL},
+    {LA_RATIONAL, LA_RATIONAL, LA_RATIONAL, LA_RATIONAL},
+    {LA_RATIONAL, LA_RATIONAL, LA_RATIONAL, LA_RATIONAL},
+    {LA_RATIONAL, LA_RATIONAL, LA_RATIONAL, LA_RATIONAL},
+    {LA_RATIONAL, LA_RATIONAL, LA_RATIONAL, LA_RATIONAL},
+  };
+  Tconstraint_kind c_type[] = {
+    LA_EQUALITY,
+    LA_EQUALITY,
+    LA_DISEQUALITY,
+    LA_EQUALITY,
+    LA_DISEQUALITY,
+    LA_DISEQUALITY,
+  }; 
+  la_do_test_push_pop(NC, NV, coef, v, v_type, c_type);
+#undef NC
+#undef NV
+}

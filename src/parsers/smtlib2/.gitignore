@@ -1,0 +1,8 @@
+smtfun.h
+smtlib.lex
+smtlib.y
+smttypes.h
+smtlex.c
+smtsyn.c
+smtsyn.h
+smtsyn.output

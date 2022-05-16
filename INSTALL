@@ -1,0 +1,44 @@
+
+			 The veriT SMT solver
+	      Compilation and installation instructions
+
+
+1. PREREQUISITES
+
+The installation process automatically downloads third-party software
+(minisat and the GNU MP library)s, so you need an active Internet
+connection to install veriT.
+
+The following tools are used in the installation process:
+# gcc, g++: compilers
+# make, ar, ranlib: build process
+# wget, tar, patch: to fetch GMP and Minisat
+# bison, flex, m4: build compilers and preprocessing
+
+2. CUSTOMIZATION
+
+The build process is customizable through settings found in the file
+Makefile.config:
+
+- The default settings of the build process installs the binaries in
+directory $HOME/bin.  Edit file Makefile.config to change the
+installation directory.
+
+- Proof production is disabled by default. Edit file Makefile.config to
+turn on proof production capabilities.
+
+3. COMPILATION AND INSTALLATION
+
+Compilation and installation are performed by the following commands:
+
+> make
+> make install
+
+4. DOCUMENTATION
+
+Optionally, you may want to generate documentation for veriT. The following
+command generates both user and developer documentation:
+> make doc
+
+Note: Generation of the documentation takes much more time and space than
+compilation.
